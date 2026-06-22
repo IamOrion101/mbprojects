@@ -1,145 +1,518 @@
-   1  import React, { useEffect, useState } from 'react';
-     2  import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-     3  import L from 'leaflet';
-     4  import 'leaflet/dist/leaflet.css';
-     5  import { adminAPI } from '../api'; // Pointing to your 170.9.224.115 IP
-     6
-     7  // --- CUSTOM ICONS ---
-     8  const truckIcon = new L.Icon({
-     9      iconUrl: 'https://cdn-icons-png.flaticon.com/512/3448/3448339.png',
-    10      iconSize: [35, 35],
-    11      iconAnchor: [17, 35],
-    12      popupAnchor: [0, -35],
-    13  });
-    14  const trailerIcon = new L.Icon({
-    15      iconUrl: 'https://cdn-icons-png.flaticon.com/512/2891/2891444.png',
-    16      iconSize: [45, 45],
-    17      iconAnchor: [22, 45],
-    18      popupAnchor: [0, -45],
-    19  });
-    20  const AdminDashboard = () => {
-    21    const [fleet, setFleet] = useState([]);
-    22    const [loading, setLoading] = useState(true);
-    23
-    24    // 1. FETCH FROM DATABASE
-    25    const fetchGodView = async () => {
-    26      try {
-    27        const data = await adminAPI.getGodView();
-    28        setFleet(Array.isArray(data) ? data : []);
-    29        setLoading(false);
-    30      } catch (err) {
-    31        console.error("Fetch Error:", err.message);
-    32        setLoading(false);
-    33      }
-    34    };
-    35    useEffect(() => {
-    36      fetchGodView();
-    37      const interval = setInterval(fetchGodView, 5000);
-    38      return () => clearInterval(interval);
-    39    }, []);
-    40
-    41    // 2. TOGGLE DATABASE RECORD
-    42    const toggleTrailerMode = async (driverId, currentIsTrailer) => {
-    43      if (!driverId) return;
-    44      const targetStatus = !currentIsTrailer;
-    45
-    46      try {
-    47        const response = await fetch(`http://170.9.224.115:5000/api/admin/trailers/toggle/${driverId}`, {
-    48          method: 'PUT',
-    49          headers: {
-    50            'Content-Type': 'application/json',
-    51            'Authorization': `Bearer ${localStorage.getItem('token')}`
-    52          },
-    53          body: JSON.stringify({ active_status: targetStatus })
-    54        });
-    55
-    56        const data = await response.json();
-    57        if (data.success) {
-    58          console.log("✅ Database record updated!");
-    59          fetchGodView();
-    60        }
-    61      } catch (err) {
-    62        console.error("🚨 DB Connection Error:", err.message);
-    63      }
-    64    };
-    65
-    66    // 3. CALCULATIONS
-    67    const totalRevenue = (fleet || []).reduce((sum, job) => {
-    68      const val = String(job.price_zar || '0').replace(/[^0-9.]/g, '');
-    69      return sum + (parseFloat(val) || 0);
-    70    }, 0);
-    71
-    72    const uniqueFleet = fleet || [];
-    73
-    74    // 4. LOADING STATE
-    75    if (loading) {
-    76      return <div className="h-screen bg-gray-900 text-yellow-500 flex items-center justify-center font-black italic">LOADING ANDROMEDA...</div>;
-    77    }
-    78  return (
-    79    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', backgroundColor: '#111827' }}>
-    80      {/* HEADER */}
-    81
-    82      <header style={{ height: '60px', backgroundColor: '#1f2937', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 20px', borderBottom: '1px solid #374151', zIndex: 1000 }}>
-    83        <h1 style={{ fontWeight: '900', color: '#eab308', margin: 0 }}>ANDROMEDA GOD VIEW</h1>
-    84        <div style={{ textAlign: 'right' }}>
-    85          <div style={{ fontSize: '10px', color: '#9ca3af' }}>TOTAL REVENUE</div>
-    86          <div style={{ fontWeight: 'bold', color: '#4ade80' }}>R {totalRevenue.toFixed(2)}</div>
-    87        </div>
-    88      </header>
-    89
-    90      {/* MAIN CONTENT */}
-    91      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-    92
-    93        {/* LEFT: THE MAP */}
-    94        <div style={{ flex: 3, position: 'relative', backgroundColor: '#000' }}>
-    95          <MapContainer
-    96            center={[-26.2041, 28.0473]}
-    97            zoom={10}
-    98            style={{ height: '100%', width: '100%' }}
-    99          >
-   100            <TileLayer
-   101              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-   102              attribution='&copy; OpenStreetMap'
-   103            />
-   104            {fleet.map((driver, index) => {
-   105              const lat = (driver.lat && driver.lat !== 0) ? driver.lat : -26.2041;
-   106              const lng = (driver.lng && driver.lng !== 0) ? driver.lng : 28.0473;
-   107              const isT = driver.has_trailer === true || String(driver.has_trailer).toLowerCase() === 't';
-   108              return (
-   109                <Marker key={`map-${driver.id}-${index}`} position={[lat, lng]} icon={isT ? trailerIcon : truckIcon}>
-   110                  <Popup><b>{driver.driver_name || driver.full_name}</b></Popup>
-   111                </Marker>
-   112              );
-   113            })}
-   114          </MapContainer>
-   115        </div>
-   116
-   117        {/* RIGHT: SIDEBAR */}
-   118        <aside style={{ flex: 1, backgroundColor: '#1f2937', padding: '20px', overflowY: 'auto', borderLeft: '1px solid #374151', color: 'white' }}>
-   119          <h2 style={{ fontSize: '12px', color: '#9ca3af', textTransform: 'uppercase', marginBottom: '20px' }}>
-   120            Active Fleet ({fleet.length})
-   121          </h2>
-   122          {fleet.map((driver, index) => {
-   123            const isT = driver.has_trailer === true || String(driver.has_trailer).toLowerCase() === 't';
-   124            return (
-   125              <div key={`side-${driver.id}-${index}`} style={{ backgroundColor: 'rgba(55, 65, 81, 0.5)', padding: '15px', borderRadius: '8px', marginBottom: '10px', border: '1px solid #4b5563' }}>
-   126                <div style={{ fontWeight: 'bold', marginBottom: '10px' }}>{driver.driver_name || driver.full_name}</div>
-   127                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-   128                  <span style={{ color: '#eab308', fontWeight: 'bold' }}>R{driver.price_zar || '0.00'}</span>
-   129                  <button
-   130                    onClick={() => toggleTrailerMode(driver.id, isT)}
-   131                    style={{ backgroundColor: isT ? '#dc2626' : '#eab308', color: isT ? 'white' : 'black', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}
-   132                  >
-   133                    {isT ? 'REMOVE TRAILER' : 'ADD TRAILER'}
-   134                  </button>
-   135                </div>
-   136              </div>
-   137            );
-   138          })}
-   139        </aside>
-   140      </div>
-   141    </div>
-   142  );
-   143  }; // <--- ADD THIS BRACE HERE TO CLOSE THE COMPONENT
-   144
-   145  export default AdminDashboard;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Moapi Bokgoni · Events & Projects</title>
+    <!-- Font Awesome (free icons) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <style>
+        /* ---------- RESET & BASE ---------- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background-color: #0b0e1a;
+            color: #f0f4fa;
+            line-height: 1.6;
+        }
+
+        /* ---------- HEADER ---------- */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px 8%;
+            background: rgba(11, 14, 26, 0.92);
+            backdrop-filter: blur(12px);
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            border-bottom: 1px solid #2a2f45;
+        }
+
+        .logo {
+            font-size: 1.6rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .logo span {
+            color: #f7b731;
+            font-weight: 300;
+        }
+
+        nav a {
+            color: #bcc3d9;
+            text-decoration: none;
+            margin-left: 28px;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        nav a:hover {
+            color: #f7b731;
+        }
+
+        /* ---------- HERO ---------- */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 120px 20px 80px;
+            background: radial-gradient(circle at 30% 20%, #1f2640, #0b0e1a 85%);
+        }
+
+        .hero-content h1 {
+            font-size: 3.2rem;
+            margin-bottom: 18px;
+            font-weight: 600;
+        }
+
+        .hero-content .highlight {
+            color: #f7b731;
+            border-bottom: 3px solid #f7b731;
+            padding-bottom: 4px;
+        }
+
+        .hero-content p {
+            font-size: 1.25rem;
+            color: #a9b3d1;
+            max-width: 640px;
+            margin: 0 auto 34px auto;
+        }
+
+        .btn {
+            display: inline-block;
+            background: #f7b731;
+            color: #0b0e1a;
+            padding: 14px 34px;
+            border-radius: 50px;
+            font-weight: 700;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            transition: 0.25s ease;
+            box-shadow: 0 8px 18px rgba(247, 183, 49, 0.25);
+        }
+
+        .btn:hover {
+            background: #ffce5c;
+            transform: translateY(-3px);
+            box-shadow: 0 14px 28px rgba(247, 183, 49, 0.35);
+        }
+
+        /* ---------- EVENTS SECTION ---------- */
+        .events-section {
+            padding: 100px 8% 70px;
+            text-align: center;
+        }
+
+        .events-section h2 {
+            font-size: 2.6rem;
+            margin-bottom: 18px;
+        }
+
+        .section-sub {
+            color: #a9b3d1;
+            max-width: 600px;
+            margin: 0 auto 44px auto;
+            font-size: 1.1rem;
+        }
+
+        .filter-container {
+            margin-bottom: 44px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .filter-btn {
+            background: #1a1f33;
+            color: #c8d0e6;
+            border: 1px solid #2f3650;
+            padding: 10px 24px;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.25s;
+        }
+
+        .filter-btn.active,
+        .filter-btn:hover {
+            background: #f7b731;
+            color: #0b0e1a;
+            border-color: #f7b731;
+        }
+
+        .events-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 34px;
+        }
+
+        .event-card {
+            background: #151b30;
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1px solid #2a2f45;
+            transition: 0.3s;
+            text-align: left;
+            backdrop-filter: blur(4px);
+        }
+
+        .event-card:hover {
+            transform: translateY(-8px);
+            border-color: #f7b731;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+        }
+
+        .card-img {
+            height: 160px;
+            background: linear-gradient(145deg, #2d3452, #191f36);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3.4rem;
+            color: #f7b731;
+            border-bottom: 2px solid #2f3650;
+        }
+
+        .card-content {
+            padding: 24px 24px 28px;
+        }
+
+        .tag {
+            display: inline-block;
+            background: rgba(247, 183, 49, 0.12);
+            color: #f7b731;
+            padding: 4px 14px;
+            border-radius: 40px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            margin-bottom: 12px;
+        }
+
+        .event-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+        }
+
+        .event-card p {
+            color: #bcc3d9;
+            font-size: 0.95rem;
+            margin-bottom: 14px;
+        }
+
+        .event-card .date {
+            color: #d3dbf5;
+            font-weight: 600;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .event-card .date i {
+            color: #f7b731;
+        }
+
+        /* ---------- CONTACT ---------- */
+        .contact-section {
+            padding: 90px 8% 70px;
+            background: #11162b;
+            text-align: center;
+            border-top: 1px solid #262d47;
+        }
+
+        .contact-section h2 {
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+        }
+
+        .contact-section>p {
+            color: #a9b3d1;
+            max-width: 520px;
+            margin: 0 auto 40px auto;
+        }
+
+        form {
+            max-width: 620px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        form input,
+        form textarea {
+            width: 100%;
+            padding: 16px 20px;
+            background: #0b0e1a;
+            border: 1px solid #2f3650;
+            color: #f0f4fa;
+            border-radius: 40px;
+            font-size: 1rem;
+            transition: 0.25s;
+        }
+
+        form input:focus,
+        form textarea:focus {
+            outline: none;
+            border-color: #f7b731;
+            background: #10152a;
+        }
+
+        form textarea {
+            border-radius: 24px;
+            resize: vertical;
+        }
+
+        .contact-btn {
+            background: #f7b731;
+            color: #0b0e1a;
+            padding: 16px;
+            border: none;
+            border-radius: 60px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: 0.25s;
+            margin-top: 6px;
+        }
+
+        .contact-btn:hover {
+            background: #ffd15c;
+            transform: scale(1.02);
+        }
+
+        /* ---------- FOOTER ---------- */
+        footer {
+            text-align: center;
+            padding: 30px 8%;
+            background: #090c17;
+            border-top: 1px solid #1e243b;
+            color: #69729b;
+            font-size: 0.9rem;
+        }
+
+        .footer-social a {
+            color: #69729b;
+            margin: 0 12px;
+            font-size: 1.2rem;
+            transition: 0.2s;
+        }
+
+        .footer-social a:hover {
+            color: #f7b731;
+        }
+
+        /* ---------- RESPONSIVE ---------- */
+        @media (max-width: 700px) {
+            header {
+                flex-direction: column;
+                gap: 10px;
+                padding: 14px 5%;
+            }
+            nav a {
+                margin: 0 12px;
+                font-size: 0.95rem;
+            }
+            .hero-content h1 {
+                font-size: 2.3rem;
+            }
+            .events-section {
+                padding: 80px 5% 50px;
+            }
+            .events-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* card transition for filter */
+        .event-card {
+            opacity: 1;
+            transition: opacity 0.25s ease, transform 0.3s ease, border 0.2s;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header>
+        <div class="logo">Moapi <span>Bokgoni</span></div>
+        <nav>
+            <a href="#home">Home</a>
+            <a href="#events">Events</a>
+            <a href="#contact">Contact</a>
+        </nav>
+    </header>
+
+    <!-- HERO -->
+    <section id="home" class="hero">
+        <div class="hero-content">
+            <h1>Where <span class="highlight">Data</span> Meets <span class="highlight">Innovation</span></h1>
+            <p>Moapi Bokgoni curates high-impact tech conferences, mining intelligence summits, and next‑gen project showcases across Africa.</p>
+            <a href="#events" class="btn"><i class="fas fa-calendar-alt" style="margin-right: 8px;"></i> Explore events</a>
+        </div>
+    </section>
+
+    <!-- EVENTS -->
+    <section id="events" class="events-section">
+        <h2>Our Portfolio</h2>
+        <p class="section-sub">Flagship events & projects that drive digital transformation in data, mining, and infrastructure.</p>
+
+        <div class="filter-container">
+            <button class="filter-btn active" data-filter="all">All</button>
+            <button class="filter-btn" data-filter="data">Data & AI</button>
+            <button class="filter-btn" data-filter="mining">Smart Mining</button>
+        </div>
+
+        <div class="events-grid">
+            <!-- Card 1 -->
+            <div class="event-card" data-category="data">
+                <div class="card-img"><i class="fas fa-database"></i></div>
+                <div class="card-content">
+                    <span class="tag"><i class="fas fa-code" style="margin-right: 6px;"></i> Big Data</span>
+                    <h3>DataCon 2026</h3>
+                    <p>Next‑gen data architectures, AI‑driven analytics, and real‑time streaming for enterprise.</p>
+                    <div class="date"><i class="far fa-calendar-alt"></i> 12–14 Aug 2026</div>
+                </div>
+            </div>
+
+            <!-- Card 2 -->
+            <div class="event-card" data-category="mining">
+                <div class="card-img"><i class="fas fa-hard-hat"></i></div>
+                <div class="card-content">
+                    <span class="tag"><i class="fas fa-microchip" style="margin-right: 6px;"></i> Mining Tech</span>
+                    <h3>Deep Automation Forum</h3>
+                    <p>IoT sensor networks, autonomous haulage, and digital twins in modern mining.</p>
+                    <div class="date"><i class="far fa-calendar-alt"></i> 19–21 Sept 2026</div>
+                </div>
+            </div>
+
+            <!-- Card 3 -->
+            <div class="event-card" data-category="data">
+                <div class="card-img"><i class="fas fa-cloud-upload-alt"></i></div>
+                <div class="card-content">
+                    <span class="tag"><i class="fas fa-server"></i> Cloud & Infrastructure</span>
+                    <h3>Industrial Data Expo</h3>
+                    <p>Streamlining raw data ingestion, edge computing, and logistics analytics for heavy industry.</p>
+                    <div class="date"><i class="far fa-calendar-alt"></i> 3–5 Oct 2026</div>
+                </div>
+            </div>
+
+            <!-- Card 4 (new, mining) -->
+            <div class="event-card" data-category="mining">
+                <div class="card-img"><i class="fas fa-map-marked-alt"></i></div>
+                <div class="card-content">
+                    <span class="tag"><i class="fas fa-ruler-combined"></i> Exploration</span>
+                    <h3>Geo‑Intelligence Summit</h3>
+                    <p>AI‑powered mineral exploration, remote sensing, and sustainable extraction.</p>
+                    <div class="date"><i class="far fa-calendar-alt"></i> 10–12 Nov 2026</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CONTACT -->
+    <section id="contact" class="contact-section">
+        <h2>Let’s build something <span style="color: #f7b731;">impactful</span></h2>
+        <p>Tell us about your next event, project, or collaboration — we’ll respond within 24 hours.</p>
+        <form id="contactForm">
+            <input type="text" placeholder="Your full name" id="contactName" required />
+            <input type="email" placeholder="Your email address" id="contactEmail" required />
+            <textarea placeholder="Share your vision, event brief, or project scope..." rows="5" id="contactMsg" required></textarea>
+            <button type="submit" class="contact-btn"><i class="fab fa-whatsapp" style="margin-right: 10px;"></i> Send via WhatsApp</button>
+        </form>
+        <p style="margin-top: 28px; font-size: 0.9rem; color: #69729b;">
+            <i class="fas fa-lock" style="margin-right: 6px;"></i> Your data is encrypted and shared only with our team.
+        </p>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+        <div class="footer-social">
+            <a href="#"><i class="fab fa-linkedin-in"></i></a>
+            <a href="#"><i class="fab fa-twitter"></i></a>
+            <a href="#"><i class="fab fa-youtube"></i></a>
+        </div>
+        <p style="margin-top: 16px;">&copy; 2026 Moapi Bokgoni Events & Projects. All rights reserved.</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // ---------- FILTER (portfolio) ----------
+            const filterBtns = document.querySelectorAll('.filter-btn');
+            const cards = document.querySelectorAll('.event-card');
+
+            filterBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    filterBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+
+                    const filterVal = btn.getAttribute('data-filter');
+
+                    cards.forEach(card => {
+                        const cat = card.getAttribute('data-category');
+                        if (filterVal === 'all' || cat === filterVal) {
+                            card.style.display = 'block';
+                            setTimeout(() => card.style.opacity = '1', 8);
+                        } else {
+                            card.style.opacity = '0';
+                            card.style.display = 'none';
+                        }
+                    });
+                });
+            });
+
+            // ---------- WHATSAPP AUTOMATION (CallMeBot) ----------
+            const form = document.getElementById('contactForm');
+
+            // ⚠️  REPLACE WITH YOUR ACTUAL CallMeBot CREDENTIALS  ⚠️
+            const PHONE = "27747017967";      // e.g. "27712345678"
+            const API_KEY = "4898902";         // your numeric API key
+
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+
+                const name = document.getElementById('contactName').value.trim();
+                const email = document.getElementById('contactEmail').value.trim();
+                const msg = document.getElementById('contactMsg').value.trim();
+
+                if (!name || !email || !msg) {
+                    alert('Please fill in all fields.');
+                    return;
+                }
+
+                // format message for WhatsApp
+                const textMsg = `📩 *New Moapi Bokgoni lead*%0A%0A*Name:* ${name}%0A*Email:* ${email}%0A*Message:* ${msg}`;
+
+                const url = `https://api.callmebot.com/whatsapp.php?phone=${PHONE}&text=${textMsg}&apikey=${API_KEY}`;
+
+                // send with no-cors (fire and forget)
+                fetch(url, { mode: 'no-cors' })
+                    .then(() => {
+                        alert('✅ Thank you! Your message has been sent directly to our team via WhatsApp.');
+                        form.reset();
+                    })
+                    .catch(err => {
+                        console.error('WhatsApp send error:', err);
+                        alert('❌ Something went wrong. Please try again or contact us directly.');
+                    });
+            });
+        });
+    </script>
+</body>
+</html>
