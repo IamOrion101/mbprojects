@@ -4,7 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Moapi Bokgoni · Events & Projects</title>
-    <!-- Font Awesome (free icons) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
     <style>
         /* ---------- RESET & BASE ---------- */
@@ -20,6 +19,7 @@
             background-color: #0b0e1a;
             color: #f0f4fa;
             line-height: 1.6;
+            overflow-x: hidden;
         }
 
         /* ---------- HEADER ---------- */
@@ -35,6 +35,12 @@
             top: 0;
             z-index: 1000;
             border-bottom: 1px solid #2a2f45;
+            transition: 0.3s;
+        }
+
+        header.scrolled {
+            background: rgba(11, 14, 26, 0.98);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
         }
 
         .logo {
@@ -54,6 +60,22 @@
             margin-left: 28px;
             font-weight: 500;
             transition: color 0.3s;
+            position: relative;
+        }
+
+        nav a::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: #f7b731;
+            transition: width 0.3s;
+        }
+
+        nav a:hover::after {
+            width: 100%;
         }
 
         nav a:hover {
@@ -69,6 +91,29 @@
             text-align: center;
             padding: 120px 20px 80px;
             background: radial-gradient(circle at 30% 20%, #1f2640, #0b0e1a 85%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 50% 50%, rgba(247, 183, 49, 0.03), transparent 70%);
+            animation: rotateGlow 30s linear infinite;
+        }
+
+        @keyframes rotateGlow {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
         }
 
         .hero-content h1 {
@@ -88,6 +133,65 @@
             color: #a9b3d1;
             max-width: 640px;
             margin: 0 auto 34px auto;
+        }
+
+        /* ----- TYPING ANIMATION ----- */
+        .typing-wrapper {
+            margin: 20px auto 30px;
+            min-height: 40px;
+        }
+
+        .typing-text {
+            font-size: 1.4rem;
+            color: #f7b731;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .typing-cursor {
+            display: inline-block;
+            width: 3px;
+            height: 1.4rem;
+            background: #f7b731;
+            margin-left: 4px;
+            animation: blink 0.8s step-end infinite;
+            vertical-align: text-bottom;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        /* ----- STATS COUNTERS ----- */
+        .stats-container {
+            display: flex;
+            justify-content: center;
+            gap: 50px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px 25px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 16px;
+            border: 1px solid rgba(247, 183, 49, 0.1);
+            min-width: 120px;
+        }
+
+        .stat-number {
+            font-size: 2.4rem;
+            font-weight: 700;
+            color: #f7b731;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: #a9b3d1;
+            margin-top: 4px;
         }
 
         .btn {
@@ -165,15 +269,31 @@
             border-radius: 20px;
             overflow: hidden;
             border: 1px solid #2a2f45;
-            transition: 0.3s;
+            transition: 0.4s ease;
             text-align: left;
             backdrop-filter: blur(4px);
+            position: relative;
         }
 
         .event-card:hover {
-            transform: translateY(-8px);
+            transform: translateY(-8px) scale(1.02);
             border-color: #f7b731;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+        }
+
+        .event-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #f7b731, transparent);
+            transition: left 0.6s;
+        }
+
+        .event-card:hover::before {
+            left: 100%;
         }
 
         .card-img {
@@ -185,6 +305,11 @@
             font-size: 3.4rem;
             color: #f7b731;
             border-bottom: 2px solid #2f3650;
+            transition: 0.3s;
+        }
+
+        .event-card:hover .card-img {
+            background: linear-gradient(145deg, #353d5e, #1f2640);
         }
 
         .card-content {
@@ -225,6 +350,45 @@
 
         .event-card .date i {
             color: #f7b731;
+        }
+
+        /* ---------- AUTO-SCROLL EVENTS MARQUEE ---------- */
+        .marquee-section {
+            background: #11162b;
+            padding: 30px 0;
+            border-top: 1px solid #262d47;
+            border-bottom: 1px solid #262d47;
+            overflow: hidden;
+        }
+
+        .marquee-content {
+            display: flex;
+            gap: 60px;
+            animation: marqueeScroll 25s linear infinite;
+            width: max-content;
+        }
+
+        .marquee-content span {
+            font-size: 1.1rem;
+            color: #bcc3d9;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .marquee-content span i {
+            color: #f7b731;
+        }
+
+        @keyframes marqueeScroll {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        .marquee-wrapper {
+            display: flex;
+            overflow: hidden;
         }
 
         /* ---------- CONTACT ---------- */
@@ -271,6 +435,7 @@
             outline: none;
             border-color: #f7b731;
             background: #10152a;
+            box-shadow: 0 0 20px rgba(247, 183, 49, 0.05);
         }
 
         form textarea {
@@ -289,6 +454,24 @@
             cursor: pointer;
             transition: 0.25s;
             margin-top: 6px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .contact-btn::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1), transparent 70%);
+            transform: scale(0);
+            transition: transform 0.5s;
+        }
+
+        .contact-btn:hover::after {
+            transform: scale(1);
         }
 
         .contact-btn:hover {
@@ -315,6 +498,7 @@
 
         .footer-social a:hover {
             color: #f7b731;
+            transform: translateY(-3px);
         }
 
         /* ---------- RESPONSIVE ---------- */
@@ -337,9 +521,21 @@
             .events-grid {
                 grid-template-columns: 1fr;
             }
+            .stats-container {
+                gap: 20px;
+            }
+            .stat-item {
+                min-width: 80px;
+                padding: 10px 15px;
+            }
+            .stat-number {
+                font-size: 1.8rem;
+            }
+            .typing-text {
+                font-size: 1.1rem;
+            }
         }
 
-        /* card transition for filter */
         .event-card {
             opacity: 1;
             transition: opacity 0.25s ease, transform 0.3s ease, border 0.2s;
@@ -362,10 +558,58 @@
     <section id="home" class="hero">
         <div class="hero-content">
             <h1>Where <span class="highlight">Data</span> Meets <span class="highlight">Innovation</span></h1>
+            
+            <!-- TYPING ANIMATION -->
+            <div class="typing-wrapper">
+                <span class="typing-text" id="typingText"></span>
+                <span class="typing-cursor"></span>
+            </div>
+
             <p>Moapi Bokgoni curates high-impact tech conferences, mining intelligence summits, and next‑gen project showcases across Africa.</p>
             <a href="#events" class="btn"><i class="fas fa-calendar-alt" style="margin-right: 8px;"></i> Explore events</a>
+
+            <!-- STATS COUNTERS -->
+            <div class="stats-container">
+                <div class="stat-item">
+                    <span class="stat-number" data-target="12">0</span>
+                    <span class="stat-label">Events Hosted</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number" data-target="1500">0</span>
+                    <span class="stat-label">Attendees</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number" data-target="25">0</span>
+                    <span class="stat-label">Industry Partners</span>
+                </div>
+            </div>
         </div>
     </section>
+
+    <!-- AUTO-SCROLL MARQUEE -->
+    <div class="marquee-section">
+        <div class="marquee-wrapper">
+            <div class="marquee-content">
+                <span><i class="fas fa-robot"></i> Corporate Events in IT</span>
+                <span><i class="fas fa-database"></i> Data Mining & Analytics</span>
+                <span><i class="fas fa-brain"></i> Artificial Intelligence</span>
+                <span><i class="fas fa-hard-hat"></i> Smart Mining Technologies</span>
+                <span><i class="fas fa-cloud"></i> Cloud Infrastructure</span>
+                <span><i class="fas fa-chart-line"></i> Predictive Analytics</span>
+                <span><i class="fas fa-microchip"></i> IoT & Automation</span>
+                <span><i class="fas fa-globe"></i> Digital Transformation</span>
+                <!-- Duplicate for seamless loop -->
+                <span><i class="fas fa-robot"></i> Corporate Events in IT</span>
+                <span><i class="fas fa-database"></i> Data Mining & Analytics</span>
+                <span><i class="fas fa-brain"></i> Artificial Intelligence</span>
+                <span><i class="fas fa-hard-hat"></i> Smart Mining Technologies</span>
+                <span><i class="fas fa-cloud"></i> Cloud Infrastructure</span>
+                <span><i class="fas fa-chart-line"></i> Predictive Analytics</span>
+                <span><i class="fas fa-microchip"></i> IoT & Automation</span>
+                <span><i class="fas fa-globe"></i> Digital Transformation</span>
+            </div>
+        </div>
+    </div>
 
     <!-- EVENTS -->
     <section id="events" class="events-section">
@@ -412,7 +656,7 @@
                 </div>
             </div>
 
-            <!-- Card 4 (new, mining) -->
+            <!-- Card 4 -->
             <div class="event-card" data-category="mining">
                 <div class="card-img"><i class="fas fa-map-marked-alt"></i></div>
                 <div class="card-content">
@@ -427,8 +671,8 @@
 
     <!-- CONTACT -->
     <section id="contact" class="contact-section">
-        <h2>Let’s build something <span style="color: #f7b731;">impactful</span></h2>
-        <p>Tell us about your next event, project, or collaboration — we’ll respond within 24 hours.</p>
+        <h2>Let's build something <span style="color: #f7b731;">impactful</span></h2>
+        <p>Tell us about your next event, project, or collaboration — we'll respond within 24 hours.</p>
         <form id="contactForm">
             <input type="text" placeholder="Your full name" id="contactName" required />
             <input type="email" placeholder="Your email address" id="contactEmail" required />
@@ -453,7 +697,90 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
 
-            // ---------- FILTER (portfolio) ----------
+            // ========== 1. TYPING ANIMATION ==========
+            const phrases = [
+                'Corporate Events in IT',
+                'Data Mining & Analytics',
+                'Artificial Intelligence',
+                'Smart Mining Technologies',
+                'Cloud Infrastructure',
+                'Digital Transformation'
+            ];
+            let phraseIndex = 0;
+            let charIndex = 0;
+            let isDeleting = false;
+            const typingElement = document.getElementById('typingText');
+
+            function typeEffect() {
+                const currentPhrase = phrases[phraseIndex];
+                
+                if (isDeleting) {
+                    typingElement.textContent = currentPhrase.substring(0, charIndex - 1);
+                    charIndex--;
+                } else {
+                    typingElement.textContent = currentPhrase.substring(0, charIndex + 1);
+                    charIndex++;
+                }
+
+                let delay = isDeleting ? 40 : 80;
+
+                if (!isDeleting && charIndex === currentPhrase.length) {
+                    delay = 2500;
+                    isDeleting = true;
+                } else if (isDeleting && charIndex === 0) {
+                    isDeleting = false;
+                    phraseIndex = (phraseIndex + 1) % phrases.length;
+                    delay = 400;
+                }
+
+                setTimeout(typeEffect, delay);
+            }
+
+            typeEffect();
+
+            // ========== 2. STATS COUNTER ANIMATION ==========
+            const statNumbers = document.querySelectorAll('.stat-number');
+
+            function animateCounters() {
+                statNumbers.forEach(counter => {
+                    const target = parseInt(counter.getAttribute('data-target'));
+                    const duration = 2000;
+                    const startTime = performance.now();
+                    const startValue = 0;
+
+                    function updateCounter(currentTime) {
+                        const elapsed = currentTime - startTime;
+                        const progress = Math.min(elapsed / duration, 1);
+                        const eased = 1 - Math.pow(1 - progress, 3);
+                        const currentValue = Math.floor(eased * target);
+                        
+                        counter.textContent = currentValue + (target > 100 ? '+' : '');
+
+                        if (progress < 1) {
+                            requestAnimationFrame(updateCounter);
+                        } else {
+                            counter.textContent = target + (target > 100 ? '+' : '');
+                        }
+                    }
+
+                    requestAnimationFrame(updateCounter);
+                });
+            }
+
+            // Trigger counters when hero is visible
+            const heroSection = document.querySelector('.hero');
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        animateCounters();
+                        observer.disconnect();
+                    }
+                });
+            }, { threshold: 0.3 });
+
+            observer.observe(heroSection);
+
+            // ========== 3. FILTER ==========
             const filterBtns = document.querySelectorAll('.filter-btn');
             const cards = document.querySelectorAll('.event-card');
 
@@ -471,18 +798,28 @@
                             setTimeout(() => card.style.opacity = '1', 8);
                         } else {
                             card.style.opacity = '0';
-                            card.style.display = 'none';
+                            setTimeout(() => card.style.display = 'none', 250);
                         }
                     });
                 });
             });
 
-            // ---------- WHATSAPP AUTOMATION (CallMeBot) ----------
+            // ========== 4. HEADER SCROLL EFFECT ==========
+            const header = document.querySelector('header');
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 50) {
+                    header.classList.add('scrolled');
+                } else {
+                    header.classList.remove('scrolled');
+                }
+            });
+
+            // ========== 5. WHATSAPP AUTOMATION ==========
             const form = document.getElementById('contactForm');
 
-            // ⚠️  REPLACE WITH YOUR ACTUAL CallMeBot CREDENTIALS  ⚠️
-            const PHONE = "27747017967";      // e.g. "27712345678"
-            const API_KEY = "4898902";         // your numeric API key
+            // ⚠️ REPLACE WITH YOUR ACTUAL CallMeBot CREDENTIALS ⚠️
+            const PHONE = "27747017967";
+            const API_KEY = "4898902";
 
             form.addEventListener('submit', (e) => {
                 e.preventDefault();
@@ -496,12 +833,15 @@
                     return;
                 }
 
-                // format message for WhatsApp
                 const textMsg = `📩 *New Moapi Bokgoni lead*%0A%0A*Name:* ${name}%0A*Email:* ${email}%0A*Message:* ${msg}`;
-
                 const url = `https://api.callmebot.com/whatsapp.php?phone=${PHONE}&text=${textMsg}&apikey=${API_KEY}`;
 
-                // send with no-cors (fire and forget)
+                // Show loading state
+                const submitBtn = form.querySelector('.contact-btn');
+                const originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+                submitBtn.disabled = true;
+
                 fetch(url, { mode: 'no-cors' })
                     .then(() => {
                         alert('✅ Thank you! Your message has been sent directly to our team via WhatsApp.');
@@ -510,6 +850,10 @@
                     .catch(err => {
                         console.error('WhatsApp send error:', err);
                         alert('❌ Something went wrong. Please try again or contact us directly.');
+                    })
+                    .finally(() => {
+                        submitBtn.innerHTML = originalText;
+                        submitBtn.disabled = false;
                     });
             });
         });
